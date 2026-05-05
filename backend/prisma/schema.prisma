@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DebtStatus {
+  ACTIVE
+  PAID
+  OVERDUE
+  PAUSED
+}
+
+enum ExpenseType {
+  COMMON
+  DEBT_PAYMENT
+}
+
+model Debt {
+  id               String     @id @default(uuid())
+  name             String
+  description      String?
+  creditor         String?
+  initialAmount    Int
+  pendingAmount    Int
+  paidAmount       Int        @default(0)
+  startDate        DateTime
+  estimatedEndDate DateTime?
+  status           DebtStatus @default(ACTIVE)
+  notes            String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  expenses         Expense[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Income {
+  id            String   @id @default(uuid())
+  description   String
+  amount        Int
+  category      String
+  receivedAt    DateTime
+  paymentMethod String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([category])
+  @@index([receivedAt])
+  @@index([createdAt])
+}
+
+model Expense {
+  id            String      @id @default(uuid())
+  description   String
+  amount        Int
+  category      String
+  spentAt       DateTime
+  paymentMethod String?
+  type          ExpenseType @default(COMMON)
+  debtId        String?
+  debt          Debt?       @relation(fields: [debtId], references: [id], onDelete: SetNull)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([category])
+  @@index([spentAt])
+  @@index([type])
+  @@index([debtId])
+  @@index([createdAt])
+}

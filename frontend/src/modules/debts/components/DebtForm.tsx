@@ -1,0 +1,162 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import type { CreateDebtInput } from '../types/debt';
+
+const debtSchema = z.object({
+  name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres.'),
+  creditor: z.string().optional(),
+  description: z.string().optional(),
+  initialAmount: z.coerce
+    .number()
+    .int('El monto debe ser un número entero.')
+    .min(1, 'El monto debe ser mayor a cero.'),
+  startDate: z.string().min(1, 'Selecciona una fecha de inicio.'),
+  estimatedEndDate: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type DebtFormValues = z.infer<typeof debtSchema>;
+
+interface DebtFormProps {
+  onSubmit: (input: CreateDebtInput) => void;
+  isSubmitting?: boolean;
+}
+
+export function DebtForm({ onSubmit, isSubmitting }: DebtFormProps) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<DebtFormValues>({
+    resolver: zodResolver(debtSchema),
+    defaultValues: {
+      name: '',
+      creditor: '',
+      description: '',
+      initialAmount: 0,
+      startDate: today,
+      estimatedEndDate: '',
+      notes: '',
+    },
+  });
+
+  function handleValidSubmit(values: DebtFormValues) {
+    onSubmit({
+      ...values,
+      status: 'ACTIVE',
+      estimatedEndDate: values.estimatedEndDate || undefined,
+    });
+
+    reset({
+      name: '',
+      creditor: '',
+      description: '',
+      initialAmount: 0,
+      startDate: today,
+      estimatedEndDate: '',
+      notes: '',
+    });
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit(handleValidSubmit)}
+      className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-xl"
+    >
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-slate-100">Nueva deuda</h2>
+        <p className="mt-2 text-sm text-slate-400">
+          Registra una deuda para controlar su monto inicial, saldo pendiente y estado.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-300">Nombre</span>
+          <input
+            {...register('name')}
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-400"
+            placeholder="Ej: Tarjeta ABC"
+          />
+          {errors.name && <p className="mt-1 text-xs text-rose-300">{errors.name.message}</p>}
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-300">Acreedor</span>
+          <input
+            {...register('creditor')}
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-400"
+            placeholder="Ej: Banco, tienda, persona"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-300">Monto inicial</span>
+          <input
+            type="number"
+            min="1"
+            {...register('initialAmount')}
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-400"
+            placeholder="100000"
+          />
+          {errors.initialAmount && (
+            <p className="mt-1 text-xs text-rose-300">{errors.initialAmount.message}</p>
+          )}
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-300">Fecha de inicio</span>
+          <input
+            type="date"
+            {...register('startDate')}
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-400"
+          />
+          {errors.startDate && (
+            <p className="mt-1 text-xs text-rose-300">{errors.startDate.message}</p>
+          )}
+        </label>
+
+        <label className="block md:col-span-2">
+          <span className="mb-2 block text-sm font-medium text-slate-300">Fecha estimada de término</span>
+          <input
+            type="date"
+            {...register('estimatedEndDate')}
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-400"
+          />
+        </label>
+
+        <label className="block md:col-span-2">
+          <span className="mb-2 block text-sm font-medium text-slate-300">Descripción</span>
+          <textarea
+            {...register('description')}
+            rows={3}
+            className="w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-400"
+            placeholder="Detalle opcional de la deuda"
+          />
+        </label>
+
+        <label className="block md:col-span-2">
+          <span className="mb-2 block text-sm font-medium text-slate-300">Notas</span>
+          <textarea
+            {...register('notes')}
+            rows={2}
+            className="w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-400"
+            placeholder="Notas internas opcionales"
+          />
+        </label>
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="mt-6 w-full rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isSubmitting ? 'Guardando...' : 'Crear deuda'}
+      </button>
+    </form>
+  );
+}
