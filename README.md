@@ -249,8 +249,3 @@ http://localhost:5173/expenses
 
 ---
 
-## Próxima versión
-
-**v0.8 — Filtros y mejoras UX**
-
-Se recomienda agregar filtros por fecha, categoría y tipo de gasto, además de mejoras visuales generales y navegación más consistente.
