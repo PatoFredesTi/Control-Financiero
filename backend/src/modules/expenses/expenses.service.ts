@@ -1,8 +1,48 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DebtStatus, ExpenseType, Prisma } from '@prisma/client';
+import { DebtStatus, Expense, ExpenseType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
+
+type ExpenseFilters = {
+  category?: string;
+  type?: ExpenseType;
+  startDate?: string;
+  endDate?: string;
+};
+
+type ExpenseWithDebt = Prisma.ExpenseGetPayload<{
+  include: { debt: true };
+}>;
+
+function parseStartDate(value?: string) {
+  if (!value) return undefined;
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new BadRequestException('Fecha inicial inválida. Usa formato YYYY-MM-DD.');
+  }
+
+  return date;
+}
+
+function parseEndDate(value?: string) {
+  if (!value) return undefined;
+
+  const date = new Date(`${value}T23:59:59.999Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new BadRequestException('Fecha final inválida. Usa formato YYYY-MM-DD.');
+  }
+
+  return date;
+}
+
+function normalizeOptionalText(value?: string | null) {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
+}
 
 @Injectable()
 export class ExpensesService {
@@ -27,10 +67,10 @@ export class ExpensesService {
         amount: createExpenseDto.amount,
         category: createExpenseDto.category.trim(),
         spentAt: new Date(createExpenseDto.spentAt),
-        paymentMethod: createExpenseDto.paymentMethod?.trim(),
+        paymentMethod: normalizeOptionalText(createExpenseDto.paymentMethod),
         type,
         debtId: null,
-        notes: createExpenseDto.notes?.trim(),
+        notes: normalizeOptionalText(createExpenseDto.notes),
       },
       include: {
         debt: true,
@@ -46,36 +86,11 @@ export class ExpensesService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const debt = await tx.debt.findUnique({
-        where: { id: createExpenseDto.debtId },
-      });
-
-      if (!debt) {
-        throw new NotFoundException('La deuda asociada no existe.');
-      }
-
-      if (debt.status === DebtStatus.PAID) {
-        throw new BadRequestException(
-          'No puedes registrar pagos sobre una deuda que ya está pagada.',
-        );
-      }
-
-      if (debt.status === DebtStatus.PAUSED) {
-        throw new BadRequestException(
-          'No puedes registrar pagos sobre una deuda pausada. Primero cambia su estado a activa.',
-        );
-      }
-
-      if (createExpenseDto.amount > debt.pendingAmount) {
-        throw new BadRequestException(
-          `El pago no puede superar el saldo pendiente de la deuda. Saldo pendiente: ${debt.pendingAmount}.`,
-        );
-      }
-
-      const nextPaidAmount = debt.paidAmount + createExpenseDto.amount;
-      const nextPendingAmount = debt.pendingAmount - createExpenseDto.amount;
-      const nextStatus =
-        nextPendingAmount === 0 ? DebtStatus.PAID : debt.status;
+      const updatedDebt = await this.applyDebtPayment(
+        tx,
+        createExpenseDto.debtId!,
+        createExpenseDto.amount,
+      );
 
       const expense = await tx.expense.create({
         data: {
@@ -83,19 +98,10 @@ export class ExpensesService {
           amount: createExpenseDto.amount,
           category: 'Pago de deuda',
           spentAt: new Date(createExpenseDto.spentAt),
-          paymentMethod: createExpenseDto.paymentMethod?.trim(),
+          paymentMethod: normalizeOptionalText(createExpenseDto.paymentMethod),
           type: ExpenseType.DEBT_PAYMENT,
-          debtId: debt.id,
-          notes: createExpenseDto.notes?.trim(),
-        },
-      });
-
-      const updatedDebt = await tx.debt.update({
-        where: { id: debt.id },
-        data: {
-          paidAmount: nextPaidAmount,
-          pendingAmount: nextPendingAmount,
-          status: nextStatus,
+          debtId: updatedDebt.id,
+          notes: normalizeOptionalText(createExpenseDto.notes),
         },
       });
 
@@ -106,16 +112,40 @@ export class ExpensesService {
     });
   }
 
-  async findAll(category?: string, type?: ExpenseType) {
-    if (type && !Object.values(ExpenseType).includes(type)) {
+  async findAll(filters: ExpenseFilters = {}) {
+    if (filters.type && !Object.values(ExpenseType).includes(filters.type)) {
       throw new BadRequestException('Tipo de gasto inválido.');
     }
 
+    const startDate = parseStartDate(filters.startDate);
+    const endDate = parseEndDate(filters.endDate);
+
+    if (startDate && endDate && startDate > endDate) {
+      throw new BadRequestException('La fecha inicial no puede ser mayor que la fecha final.');
+    }
+
+    const where: Prisma.ExpenseWhereInput = {
+      ...(filters.category
+        ? {
+            category: {
+              equals: filters.category.trim(),
+              mode: 'insensitive',
+            },
+          }
+        : {}),
+      ...(filters.type ? { type: filters.type } : {}),
+      ...(startDate || endDate
+        ? {
+            spentAt: {
+              ...(startDate ? { gte: startDate } : {}),
+              ...(endDate ? { lte: endDate } : {}),
+            },
+          }
+        : {}),
+    };
+
     return this.prisma.expense.findMany({
-      where: {
-        ...(category ? { category } : {}),
-        ...(type ? { type } : {}),
-      },
+      where,
       include: {
         debt: true,
       },
@@ -141,55 +171,56 @@ export class ExpensesService {
   }
 
   async update(id: string, updateExpenseDto: UpdateExpenseDto) {
-    const currentExpense = await this.findOne(id);
+    return this.prisma.$transaction(async (tx) => {
+      const currentExpense = await tx.expense.findUnique({
+        where: { id },
+        include: { debt: true },
+      });
 
-    if (currentExpense.type === ExpenseType.DEBT_PAYMENT) {
-      const isTryingToChangeFinancialImpact =
-        updateExpenseDto.amount !== undefined ||
-        updateExpenseDto.type !== undefined ||
-        updateExpenseDto.debtId !== undefined ||
-        updateExpenseDto.category !== undefined;
-
-      if (isTryingToChangeFinancialImpact) {
-        throw new BadRequestException(
-          'En v0.5 no se permite cambiar monto, tipo, categoría o deuda asociada de un pago de deuda. Elimina el pago y créalo nuevamente para recalcular la deuda correctamente.',
-        );
+      if (!currentExpense) {
+        throw new NotFoundException('El gasto solicitado no existe.');
       }
-    }
 
-    if (currentExpense.type === ExpenseType.COMMON) {
       const nextType = updateExpenseDto.type ?? currentExpense.type;
+      const nextAmount = updateExpenseDto.amount ?? currentExpense.amount;
+      const nextSpentAt = updateExpenseDto.spentAt
+        ? new Date(updateExpenseDto.spentAt)
+        : currentExpense.spentAt;
+      const nextDescription = updateExpenseDto.description?.trim() ?? currentExpense.description;
+      const nextPaymentMethod = updateExpenseDto.paymentMethod !== undefined
+        ? normalizeOptionalText(updateExpenseDto.paymentMethod)
+        : currentExpense.paymentMethod;
+      const nextNotes = updateExpenseDto.notes !== undefined
+        ? normalizeOptionalText(updateExpenseDto.notes)
+        : currentExpense.notes;
 
-      if (nextType === ExpenseType.DEBT_PAYMENT) {
+      if (nextType === ExpenseType.COMMON) {
+        return this.updateAsCommonExpense(tx, currentExpense, {
+          description: nextDescription,
+          amount: nextAmount,
+          category: updateExpenseDto.category?.trim() ?? currentExpense.category,
+          spentAt: nextSpentAt,
+          paymentMethod: nextPaymentMethod,
+          notes: nextNotes,
+        });
+      }
+
+      const nextDebtId = updateExpenseDto.debtId ?? currentExpense.debtId;
+
+      if (!nextDebtId) {
         throw new BadRequestException(
-          'En v0.5 no se permite convertir un gasto común en pago de deuda. Elimina el gasto y créalo nuevamente como pago de deuda.',
+          'Debes seleccionar una deuda asociada para registrar un pago de deuda.',
         );
       }
 
-      if (updateExpenseDto.debtId) {
-        throw new BadRequestException(
-          'Un gasto común no debe tener una deuda asociada.',
-        );
-      }
-    }
-
-    return this.prisma.expense.update({
-      where: { id },
-      data: {
-        description: updateExpenseDto.description?.trim(),
-        amount: updateExpenseDto.amount,
-        category: updateExpenseDto.category?.trim(),
-        spentAt: updateExpenseDto.spentAt
-          ? new Date(updateExpenseDto.spentAt)
-          : undefined,
-        paymentMethod: updateExpenseDto.paymentMethod?.trim(),
-        type: updateExpenseDto.type,
-        debtId: updateExpenseDto.debtId,
-        notes: updateExpenseDto.notes?.trim(),
-      },
-      include: {
-        debt: true,
-      },
+      return this.updateAsDebtPaymentExpense(tx, currentExpense, {
+        description: nextDescription,
+        amount: nextAmount,
+        spentAt: nextSpentAt,
+        paymentMethod: nextPaymentMethod,
+        notes: nextNotes,
+        debtId: nextDebtId,
+      });
     });
   }
 
@@ -207,17 +238,138 @@ export class ExpensesService {
     }
 
     await this.prisma.$transaction(async (tx) => {
+      await this.revertDebtPayment(tx, expense.debtId!, expense.amount);
+
       await tx.expense.delete({
         where: { id },
       });
-
-      await this.revertDebtPayment(tx, expense.debtId!, expense.amount);
     });
 
     return {
       message:
         'Pago de deuda eliminado correctamente. El saldo de la deuda fue recalculado.',
     };
+  }
+
+  private async updateAsCommonExpense(
+    tx: Prisma.TransactionClient,
+    currentExpense: ExpenseWithDebt,
+    input: {
+      description: string;
+      amount: number;
+      category: string;
+      spentAt: Date;
+      paymentMethod?: string | null;
+      notes?: string | null;
+    },
+  ) {
+    if (!input.category || input.category === 'Pago de deuda') {
+      throw new BadRequestException(
+        'Un gasto común debe tener una categoría válida distinta de Pago de deuda.',
+      );
+    }
+
+    if (currentExpense.type === ExpenseType.DEBT_PAYMENT && currentExpense.debtId) {
+      await this.revertDebtPayment(tx, currentExpense.debtId, currentExpense.amount);
+    }
+
+    return tx.expense.update({
+      where: { id: currentExpense.id },
+      data: {
+        description: input.description,
+        amount: input.amount,
+        category: input.category,
+        spentAt: input.spentAt,
+        paymentMethod: input.paymentMethod,
+        type: ExpenseType.COMMON,
+        debtId: null,
+        notes: input.notes,
+      },
+      include: { debt: true },
+    });
+  }
+
+  private async updateAsDebtPaymentExpense(
+    tx: Prisma.TransactionClient,
+    currentExpense: ExpenseWithDebt,
+    input: {
+      description: string;
+      amount: number;
+      spentAt: Date;
+      paymentMethod?: string | null;
+      notes?: string | null;
+      debtId: string;
+    },
+  ) {
+    if (currentExpense.type === ExpenseType.DEBT_PAYMENT && currentExpense.debtId) {
+      await this.revertDebtPayment(tx, currentExpense.debtId, currentExpense.amount);
+    }
+
+    const updatedDebt = await this.applyDebtPayment(tx, input.debtId, input.amount);
+
+    const updatedExpense = await tx.expense.update({
+      where: { id: currentExpense.id },
+      data: {
+        description: input.description,
+        amount: input.amount,
+        category: 'Pago de deuda',
+        spentAt: input.spentAt,
+        paymentMethod: input.paymentMethod,
+        type: ExpenseType.DEBT_PAYMENT,
+        debtId: updatedDebt.id,
+        notes: input.notes,
+      },
+    });
+
+    return {
+      ...updatedExpense,
+      debt: updatedDebt,
+    };
+  }
+
+  private async applyDebtPayment(
+    tx: Prisma.TransactionClient,
+    debtId: string,
+    amount: number,
+  ) {
+    const debt = await tx.debt.findUnique({
+      where: { id: debtId },
+    });
+
+    if (!debt) {
+      throw new NotFoundException('La deuda asociada no existe.');
+    }
+
+    if (debt.status === DebtStatus.PAID) {
+      throw new BadRequestException(
+        'No puedes registrar pagos sobre una deuda que ya está pagada.',
+      );
+    }
+
+    if (debt.status === DebtStatus.PAUSED) {
+      throw new BadRequestException(
+        'No puedes registrar pagos sobre una deuda pausada. Primero cambia su estado a activa.',
+      );
+    }
+
+    if (amount > debt.pendingAmount) {
+      throw new BadRequestException(
+        `El pago no puede superar el saldo pendiente de la deuda. Saldo pendiente: ${debt.pendingAmount}.`,
+      );
+    }
+
+    const nextPaidAmount = debt.paidAmount + amount;
+    const nextPendingAmount = debt.pendingAmount - amount;
+    const nextStatus = nextPendingAmount === 0 ? DebtStatus.PAID : DebtStatus.ACTIVE;
+
+    return tx.debt.update({
+      where: { id: debt.id },
+      data: {
+        paidAmount: nextPaidAmount,
+        pendingAmount: nextPendingAmount,
+        status: nextStatus,
+      },
+    });
   }
 
   private async revertDebtPayment(
@@ -244,7 +396,7 @@ export class ExpensesService {
       data: {
         paidAmount: nextPaidAmount,
         pendingAmount: nextPendingAmount,
-        status: debt.status === DebtStatus.PAID ? DebtStatus.ACTIVE : debt.status,
+        status: nextPendingAmount === 0 ? DebtStatus.PAID : DebtStatus.ACTIVE,
       },
     });
   }

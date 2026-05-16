@@ -8,3 +8,14 @@
 body {
   margin: 0;
 }
+
+
+@media (max-width: 767px) {
+  main {
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  }
+}
+
+.pb-mobile-nav {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+}

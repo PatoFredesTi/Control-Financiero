@@ -27,3 +27,12 @@ export type CreateExpenseInput = {
   debtId?: string;
   notes?: string;
 };
+
+export type UpdateExpenseInput = Partial<CreateExpenseInput>;
+
+export type ExpenseFilters = {
+  category?: string;
+  type?: ExpenseType;
+  startDate?: string;
+  endDate?: string;
+};

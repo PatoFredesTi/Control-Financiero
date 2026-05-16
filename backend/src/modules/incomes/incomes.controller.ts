@@ -23,8 +23,12 @@ export class IncomesController {
   }
 
   @Get()
-  findAll(@Query('category') category?: string) {
-    return this.incomesService.findAll(category);
+  findAll(
+    @Query('category') category?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.incomesService.findAll({ category, startDate, endDate });
   }
 
   @Get(':id')

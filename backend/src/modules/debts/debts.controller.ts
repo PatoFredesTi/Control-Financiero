@@ -24,8 +24,17 @@ export class DebtsController {
   }
 
   @Get()
-  findAll(@Query('status') status?: DebtStatus) {
-    return this.debtsService.findAll(status);
+  findAll(
+    @Query('status') status?: DebtStatus,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.debtsService.findAll({ status, startDate, endDate });
+  }
+
+  @Get(':id/payments')
+  findPayments(@Param('id', ParseUUIDPipe) id: string) {
+    return this.debtsService.findPayments(id);
   }
 
   @Get(':id')

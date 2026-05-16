@@ -1,13 +1,15 @@
 {
   "name": "control-financiero-frontend",
   "private": true,
-  "version": "0.7.0",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hookform/resolvers": "latest",
@@ -21,7 +23,8 @@
     "react-router-dom": "latest",
     "recharts": "latest",
     "tailwindcss": "latest",
-    "zod": "latest"
+    "zod": "latest",
+    "react-is": "latest"
   },
   "devDependencies": {
     "@eslint/js": "latest",
@@ -35,6 +38,8 @@
     "globals": "latest",
     "typescript": "latest",
     "typescript-eslint": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "@types/react-is": "latest",
+    "vitest": "latest"
   }
 }

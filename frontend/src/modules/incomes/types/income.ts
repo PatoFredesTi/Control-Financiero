@@ -1,4 +1,4 @@
-export type Income = {
+export interface Income {
   id: string;
   description: string;
   amount: number;
@@ -8,13 +8,21 @@ export type Income = {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
-};
+}
 
-export type CreateIncomeInput = {
+export interface CreateIncomeInput {
   description: string;
   amount: number;
   category: string;
   receivedAt: string;
   paymentMethod?: string;
   notes?: string;
+}
+
+export type UpdateIncomeInput = Partial<CreateIncomeInput>;
+
+export type IncomeFilters = {
+  category?: string;
+  startDate?: string;
+  endDate?: string;
 };

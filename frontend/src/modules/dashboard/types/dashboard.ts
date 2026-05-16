@@ -14,12 +14,7 @@ export type DashboardRecentMovement = {
 };
 
 export type DashboardSummary = {
-  period: {
-    month: number;
-    year: number;
-    monthStart: string;
-    nextMonthStart: string;
-  };
+  period: { month: number; year: number; monthStart: string; nextMonthStart: string; };
   totals: {
     totalIncomeThisMonth: number;
     totalExpenseThisMonth: number;
@@ -31,52 +26,19 @@ export type DashboardSummary = {
     totalDebtPaid: number;
     debtProgressPercentage: number;
   };
-  counts: {
-    incomes: number;
-    expenses: number;
-    debts: number;
-    activeDebts: number;
-    paidDebts: number;
-  };
+  counts: { incomes: number; expenses: number; debts: number; activeDebts: number; paidDebts: number; };
+  budgets: { totalBudgeted: number; totalSpent: number; remainingAmount: number; usagePercentage: number; exceededBudgets: number; count: number; };
+  savingsGoals: { totalGoals: number; activeGoals: number; completedGoals: number; totalTarget: number; totalSaved: number; remainingAmount: number; progressPercentage: number; };
   recentMovements: DashboardRecentMovement[];
 };
 
-export type MonthlyComparisonChartItem = {
-  month: string;
-  income: number;
-  expense: number;
-  balance: number;
-};
-
-export type ExpensesByCategoryChartItem = {
-  category: string;
-  amount: number;
-  count: number;
-};
-
-export type ExpenseTypeBreakdownChartItem = {
-  type: string;
-  amount: number;
-};
-
-export type DebtProgressChartItem = {
-  id: string;
-  name: string;
-  initialAmount: number;
-  paidAmount: number;
-  pendingAmount: number;
-  status: DashboardDebtStatus;
-  progressPercentage: number;
-};
+export type MonthlyComparisonChartItem = { month: string; income: number; expense: number; balance: number; };
+export type ExpensesByCategoryChartItem = { category: string; amount: number; count: number; };
+export type ExpenseTypeBreakdownChartItem = { type: string; amount: number; };
+export type DebtProgressChartItem = { id: string; name: string; initialAmount: number; paidAmount: number; pendingAmount: number; status: DashboardDebtStatus; progressPercentage: number; };
 
 export type DashboardCharts = {
-  period: {
-    month: number;
-    year: number;
-    currentMonthStart: string;
-    nextMonthStart: string;
-    sixMonthsAgoStart: string;
-  };
+  period: { month: number; year: number; currentMonthStart: string; nextMonthStart: string; sixMonthsAgoStart: string; };
   monthlyComparison: MonthlyComparisonChartItem[];
   expensesByCategory: ExpensesByCategoryChartItem[];
   expenseTypeBreakdown: ExpenseTypeBreakdownChartItem[];

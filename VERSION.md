@@ -1,161 +1,44 @@
-# v0.7 — Gráficos financieros
+# Versión 3.0 — Inicio real, producto final y presentación profesional
 
 ## Objetivo
 
-Agregar visualizaciones financieras al dashboard para que el usuario pueda comparar ingresos, gastos, balance, categorías de gasto y avance de deudas de forma rápida.
+La versión v3.0 transforma el inicio de la aplicación en una experiencia más cercana a producto real.
 
-Esta versión mantiene la base de la v0.6 y suma un endpoint específico para datos de gráficos.
+Antes, la ruta principal `/` mostraba directamente el catálogo completo de módulos y capacidades del sistema. Desde esta versión, el usuario llega primero a una pantalla de inicio clara, con propuesta de valor, botones de inicio de sesión y registro.
 
----
+El catálogo completo de funcionalidades queda separado en una vista dedicada: `/features`.
 
-## Incluido en esta versión
+## Cambios principales
 
-### Backend
+- Nueva landing principal en `/`.
+- Nuevas pantallas visuales:
+  - `/login`
+  - `/register`
+- Nueva vista separada para capacidades del sistema:
+  - `/features`
+- Footer público con acceso a funcionalidades, guía demo, planes y legal.
+- Navegación móvil ajustada para no aparecer en pantallas públicas.
+- Botón flotante móvil oculto en landing, login, registro y páginas públicas.
+- Flujo demo local:
+  - Login visual redirige a `/dashboard`.
+  - Registro visual redirige a `/onboarding`.
+- Mensaje de producto más claro:
+  - primero el usuario entiende la propuesta y accede/crea cuenta;
+  - luego entra al programa;
+  - el detalle de todo lo que hace la app queda disponible como apartado secundario.
 
-- Nuevo endpoint `GET /api/dashboard/charts`.
-- Cálculo de ingresos vs gastos de los últimos seis meses.
-- Cálculo de balance mensual de los últimos seis meses.
-- Agrupación de gastos por categoría del mes actual.
-- Separación entre gastos comunes y pagos de deuda del mes actual.
-- Cálculo de avance individual de cada deuda.
-
----
-
-### Frontend
-
-- Dashboard actualizado a v0.7.
-- Nuevo componente `FinanceCharts`.
-- Nuevo componente `ChartCard`.
-- Nuevo componente `EmptyChartState`.
-- Gráfico de barras para ingresos vs gastos.
-- Gráfico de línea para evolución del balance.
-- Gráfico de dona para gastos por categoría.
-- Gráfico de barras horizontal para gastos comunes vs pagos de deuda.
-- Gráfico de barras horizontal para avance individual de deudas.
-- Estados vacíos cuando no hay datos suficientes.
-- Estados visuales de carga y error para los gráficos.
-
----
-
-## Endpoints de dashboard
-
-```txt
-GET /api/dashboard/summary
-GET /api/dashboard/charts
-```
-
----
-
-## Respuesta esperada de `/api/dashboard/charts`
-
-```ts
-{
-  period: {
-    month: number;
-    year: number;
-    currentMonthStart: string;
-    nextMonthStart: string;
-    sixMonthsAgoStart: string;
-  };
-  monthlyComparison: Array<{
-    month: string;
-    income: number;
-    expense: number;
-    balance: number;
-  }>;
-  expensesByCategory: Array<{
-    category: string;
-    amount: number;
-    count: number;
-  }>;
-  expenseTypeBreakdown: Array<{
-    type: string;
-    amount: number;
-  }>;
-  debtProgress: Array<{
-    id: string;
-    name: string;
-    initialAmount: number;
-    paidAmount: number;
-    pendingAmount: number;
-    status: 'ACTIVE' | 'PAID' | 'OVERDUE' | 'PAUSED';
-    progressPercentage: number;
-  }>;
-}
-```
-
----
-
-## Cómo probar la v0.7
-
-1. Levantar base de datos.
-2. Ejecutar migraciones.
-3. Crear al menos una deuda desde `/debts`.
-4. Crear ingresos desde `/incomes`.
-5. Crear gastos comunes desde `/expenses`.
-6. Crear pagos de deuda desde `/expenses`.
-7. Entrar a `/dashboard`.
-8. Verificar que se muestren:
-   - Tarjetas resumen.
-   - Ingresos vs gastos.
-   - Evolución del balance.
-   - Gastos por categoría.
-   - Gastos comunes vs pagos de deuda.
-   - Avance individual de deudas.
-
----
-
-## Cómo ejecutar
-
-### Base de datos
-
-```bash
-docker compose up -d
-```
-
-### Backend
-
-```bash
-cd backend
-cp .env.example .env
-npm install
-npx prisma generate
-npx prisma migrate dev
-npm run start:dev
-```
-
-### Frontend
-
-```bash
-cd frontend
-cp .env.example .env
-npm install
-npm run dev
-```
-
----
-
-## Pantallas disponibles
+## Rutas nuevas o destacadas
 
 ```txt
 /
+/login
+/register
+/features
 /dashboard
-/debts
-/incomes
-/expenses
+/onboarding
+/demo-guide
 ```
 
----
+## Nota técnica
 
-## Próxima versión
-
-## v0.8 — Filtros y mejoras UX
-
-La próxima versión debería agregar:
-
-- Filtros por fecha.
-- Filtros por categoría.
-- Filtros por tipo de gasto.
-- Mejoras visuales generales.
-- Mejores estados vacíos.
-- Navegación más consistente entre módulos.
+Las pantallas de login y registro de esta versión son una experiencia visual/demo preparada para presentación. El backend puede seguir evolucionando hacia autenticación productiva con sesiones, refresh tokens, recuperación de contraseña y verificación real de email.

@@ -1,9 +1,10 @@
-import { CalendarDays, Tag, Trash2, WalletCards } from 'lucide-react';
+import { CalendarDays, Pencil, Tag, Trash2, WalletCards } from 'lucide-react';
 import type { Income } from '../types/income';
 import { formatCurrency } from '../../../utils/formatCurrency';
 
 type IncomeCardProps = {
   income: Income;
+  onEdit: (income: Income) => void;
   onDelete: (id: string) => void;
   isDeleting: boolean;
 };
@@ -16,7 +17,7 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-export function IncomeCard({ income, onDelete, isDeleting }: IncomeCardProps) {
+export function IncomeCard({ income, onEdit, onDelete, isDeleting }: IncomeCardProps) {
   return (
     <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -30,14 +31,23 @@ export function IncomeCard({ income, onDelete, isDeleting }: IncomeCardProps) {
           </p>
         </div>
 
-        <button
-          onClick={() => onDelete(income.id)}
-          disabled={isDeleting}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 px-4 py-2 text-sm text-rose-300 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Trash2 size={16} />
-          Eliminar
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
+          <button
+            onClick={() => onEdit(income)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 px-4 py-2 text-sm text-sky-300 transition hover:bg-sky-500/10"
+          >
+            <Pencil size={16} />
+            Editar
+          </button>
+          <button
+            onClick={() => onDelete(income.id)}
+            disabled={isDeleting}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 px-4 py-2 text-sm text-rose-300 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Trash2 size={16} />
+            Eliminar
+          </button>
+        </div>
       </div>
 
       <div className="mt-5 grid gap-3 text-sm text-slate-400 md:grid-cols-3">

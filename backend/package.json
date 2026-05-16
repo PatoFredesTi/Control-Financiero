@@ -1,6 +1,6 @@
 {
   "name": "control-financiero-backend",
-  "version": "0.7.0",
+  "version": "3.0.0",
   "private": true,
   "description": "Backend para Control Financiero Personal",
   "author": "",
@@ -18,7 +18,11 @@
     "test:cov": "jest --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "seed": "ts-node prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force",
+    "db:demo": "prisma migrate dev && npm run seed",
+    "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/common": "latest",
@@ -74,5 +78,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }

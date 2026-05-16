@@ -14,6 +14,9 @@ export interface Debt {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    expenses: number;
+  };
 }
 
 export interface CreateDebtInput {
@@ -26,3 +29,11 @@ export interface CreateDebtInput {
   status?: DebtStatus;
   notes?: string;
 }
+
+export type UpdateDebtInput = Partial<CreateDebtInput>;
+
+export type DebtFilters = {
+  status?: DebtStatus;
+  startDate?: string;
+  endDate?: string;
+};

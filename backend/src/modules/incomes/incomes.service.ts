@@ -1,7 +1,38 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
+
+type IncomeFilters = {
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+function parseStartDate(value?: string) {
+  if (!value) return undefined;
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new BadRequestException('Fecha inicial inválida. Usa formato YYYY-MM-DD.');
+  }
+
+  return date;
+}
+
+function parseEndDate(value?: string) {
+  if (!value) return undefined;
+
+  const date = new Date(`${value}T23:59:59.999Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new BadRequestException('Fecha final inválida. Usa formato YYYY-MM-DD.');
+  }
+
+  return date;
+}
 
 @Injectable()
 export class IncomesService {
@@ -20,9 +51,35 @@ export class IncomesService {
     });
   }
 
-  async findAll(category?: string) {
+  async findAll(filters: IncomeFilters = {}) {
+    const startDate = parseStartDate(filters.startDate);
+    const endDate = parseEndDate(filters.endDate);
+
+    if (startDate && endDate && startDate > endDate) {
+      throw new BadRequestException('La fecha inicial no puede ser mayor que la fecha final.');
+    }
+
+    const where: Prisma.IncomeWhereInput = {
+      ...(filters.category
+        ? {
+            category: {
+              equals: filters.category.trim(),
+              mode: 'insensitive',
+            },
+          }
+        : {}),
+      ...(startDate || endDate
+        ? {
+            receivedAt: {
+              ...(startDate ? { gte: startDate } : {}),
+              ...(endDate ? { lte: endDate } : {}),
+            },
+          }
+        : {}),
+    };
+
     return this.prisma.income.findMany({
-      where: category ? { category } : undefined,
+      where,
       orderBy: {
         receivedAt: 'desc',
       },

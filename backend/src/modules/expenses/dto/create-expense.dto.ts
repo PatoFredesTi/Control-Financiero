@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Min,
   ValidateIf,
 } from 'class-validator';
@@ -37,6 +38,7 @@ export class CreateExpenseDto {
   @ValidateIf((expense) => expense.type === ExpenseType.DEBT_PAYMENT)
   @IsString()
   @IsNotEmpty({ message: 'La deuda asociada es obligatoria para pagos de deuda.' })
+  @IsUUID('4', { message: 'La deuda asociada debe tener un ID válido.' })
   debtId?: string;
 
   @IsOptional()

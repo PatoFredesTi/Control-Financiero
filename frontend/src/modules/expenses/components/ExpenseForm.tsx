@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import type { Debt } from '../../debts/types/debt';
-import type { CreateExpenseInput, ExpenseType } from '../types/expense';
+import { formatCurrency } from '../../../utils/formatCurrency';
+import type { CreateExpenseInput, Expense, ExpenseType } from '../types/expense';
 
 const commonExpenseCategories = [
   'Alimentación',
@@ -30,17 +31,47 @@ function getToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function buildDefaultValues(expense?: Expense): CreateExpenseInput {
+  return {
+    description: expense?.description ?? '',
+    amount: expense?.amount ?? 0,
+    category: expense?.type === 'DEBT_PAYMENT' ? 'Pago de deuda' : expense?.category ?? 'Alimentación',
+    spentAt: expense?.spentAt ? expense.spentAt.slice(0, 10) : getToday(),
+    paymentMethod: expense?.paymentMethod ?? 'Transferencia',
+    type: expense?.type ?? 'COMMON',
+    debtId: expense?.debtId ?? '',
+    notes: expense?.notes ?? '',
+  };
+}
+
 type ExpenseFormProps = {
   debts: Debt[];
   onSubmit: (input: CreateExpenseInput) => void;
   isSubmitting: boolean;
   errorMessage?: string;
+  initialData?: Expense | null;
+  onCancelEdit?: () => void;
 };
 
-export function ExpenseForm({ debts, onSubmit, isSubmitting, errorMessage }: ExpenseFormProps) {
-  const activeDebts = useMemo(
-    () => debts.filter((debt) => debt.status === 'ACTIVE' || debt.status === 'OVERDUE'),
-    [debts],
+export function ExpenseForm({
+  debts,
+  onSubmit,
+  isSubmitting,
+  errorMessage,
+  initialData,
+  onCancelEdit,
+}: ExpenseFormProps) {
+  const isEditing = Boolean(initialData);
+
+  const selectableDebts = useMemo(
+    () =>
+      debts.filter(
+        (debt) =>
+          debt.status === 'ACTIVE' ||
+          debt.status === 'OVERDUE' ||
+          debt.id === initialData?.debtId,
+      ),
+    [debts, initialData?.debtId],
   );
 
   const {
@@ -51,21 +82,19 @@ export function ExpenseForm({ debts, onSubmit, isSubmitting, errorMessage }: Exp
     setValue,
     formState: { errors },
   } = useForm<CreateExpenseInput>({
-    defaultValues: {
-      description: '',
-      amount: 0,
-      category: 'Alimentación',
-      spentAt: getToday(),
-      paymentMethod: 'Transferencia',
-      type: 'COMMON',
-      debtId: '',
-      notes: '',
-    },
+    defaultValues: buildDefaultValues(initialData ?? undefined),
   });
+
+  useEffect(() => {
+    reset(buildDefaultValues(initialData ?? undefined));
+  }, [initialData, reset]);
 
   const selectedType = watch('type');
   const selectedDebtId = watch('debtId');
-  const selectedDebt = activeDebts.find((debt) => debt.id === selectedDebtId);
+  const selectedDebt = selectableDebts.find((debt) => debt.id === selectedDebtId);
+  const availableDebtPaymentAmount = selectedDebt
+    ? selectedDebt.pendingAmount + (initialData?.type === 'DEBT_PAYMENT' && initialData.debtId === selectedDebt.id ? initialData.amount : 0)
+    : 0;
 
   function handleTypeChange(type: ExpenseType) {
     setValue('type', type);
@@ -83,21 +112,17 @@ export function ExpenseForm({ debts, onSubmit, isSubmitting, errorMessage }: Exp
     const payload: CreateExpenseInput = {
       ...input,
       amount: Number(input.amount),
+      category: input.type === 'DEBT_PAYMENT' ? 'Pago de deuda' : input.category,
       debtId: input.type === 'DEBT_PAYMENT' ? input.debtId : undefined,
+      notes: input.notes?.trim() || undefined,
+      paymentMethod: input.paymentMethod?.trim() || undefined,
     };
 
     onSubmit(payload);
 
-    reset({
-      description: '',
-      amount: 0,
-      category: 'Alimentación',
-      spentAt: getToday(),
-      paymentMethod: 'Transferencia',
-      type: 'COMMON',
-      debtId: '',
-      notes: '',
-    });
+    if (!isEditing) {
+      reset(buildDefaultValues());
+    }
   }
 
   return (
@@ -105,12 +130,31 @@ export function ExpenseForm({ debts, onSubmit, isSubmitting, errorMessage }: Exp
       onSubmit={handleSubmit(submitForm)}
       className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl"
     >
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Nuevo gasto</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Registra gastos comunes o marca un gasto como pago de deuda. Si eliges una deuda, el pago descontará automáticamente su saldo pendiente.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">{isEditing ? 'Editar gasto' : 'Nuevo gasto'}</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            {isEditing
+              ? 'Edita gastos comunes o pagos de deuda. El backend revierte y reaplica pagos para mantener saldos correctos.'
+              : 'Registra gastos comunes o marca un gasto como pago de deuda para descontar automáticamente su saldo.'}
+          </p>
+        </div>
+        {isEditing && onCancelEdit && (
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-emerald-500 hover:text-emerald-300"
+          >
+            Cancelar
+          </button>
+        )}
       </div>
+
+      {errorMessage && (
+        <div className="mb-5 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm leading-6 text-rose-100">
+          {errorMessage}
+        </div>
+      )}
 
       <div className="mb-5 grid grid-cols-2 gap-3">
         <button
@@ -163,8 +207,8 @@ export function ExpenseForm({ debts, onSubmit, isSubmitting, errorMessage }: Exp
               valueAsNumber: true,
               min: { value: 1, message: 'El monto debe ser mayor a cero' },
               validate: (value) => {
-                if (selectedType === 'DEBT_PAYMENT' && selectedDebt && Number(value) > selectedDebt.pendingAmount) {
-                  return 'El pago no puede superar el saldo pendiente de la deuda';
+                if (selectedType === 'DEBT_PAYMENT' && selectedDebt && Number(value) > availableDebtPaymentAmount) {
+                  return 'El pago no puede superar el saldo disponible de la deuda';
                 }
 
                 return true;
@@ -206,23 +250,25 @@ export function ExpenseForm({ debts, onSubmit, isSubmitting, errorMessage }: Exp
               })}
             >
               <option value="">Selecciona una deuda</option>
-              {activeDebts.map((debt) => (
+              {selectableDebts.map((debt) => (
                 <option key={debt.id} value={debt.id}>
-                  {debt.name} — pendiente: {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(debt.pendingAmount)}
+                  {debt.name} — disponible: {formatCurrency(
+                    debt.pendingAmount + (initialData?.type === 'DEBT_PAYMENT' && initialData.debtId === debt.id ? initialData.amount : 0),
+                  )}
                 </option>
               ))}
             </select>
             {errors.debtId && (
               <span className="text-sm text-rose-300">{errors.debtId.message}</span>
             )}
-            {activeDebts.length === 0 && (
+            {selectableDebts.length === 0 && (
               <span className="text-sm text-amber-300">
                 No tienes deudas activas. Crea una deuda antes de registrar pagos.
               </span>
             )}
             {selectedDebt && (
-              <span className="text-sm text-emerald-300">
-                Saldo pendiente disponible: {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(selectedDebt.pendingAmount)}
+              <span className="text-xs text-slate-400">
+                Monto disponible para este pago: {formatCurrency(availableDebtPaymentAmount)}.
               </span>
             )}
           </label>
@@ -265,18 +311,12 @@ export function ExpenseForm({ debts, onSubmit, isSubmitting, errorMessage }: Exp
         </label>
       </div>
 
-      {errorMessage && (
-        <div className="mt-6 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-200">
-          {errorMessage}
-        </div>
-      )}
-
       <button
         type="submit"
-        disabled={isSubmitting}
-        className="mt-6 w-full rounded-xl bg-rose-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={isSubmitting || (selectedType === 'DEBT_PAYMENT' && selectableDebts.length === 0)}
+        className="mt-6 w-full rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? 'Guardando...' : 'Crear gasto'}
+        {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear gasto'}
       </button>
     </form>
   );

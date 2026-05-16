@@ -1,18 +1,21 @@
-import { Trash2 } from 'lucide-react';
+import { AlertTriangle, Pencil, ReceiptText, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { DebtStatusBadge } from './DebtStatusBadge';
 import type { Debt } from '../types/debt';
 
 interface DebtCardProps {
   debt: Debt;
+  onEdit: (debt: Debt) => void;
   onDelete: (id: string) => void;
   isDeleting?: boolean;
 }
 
-export function DebtCard({ debt, onDelete, isDeleting }: DebtCardProps) {
+export function DebtCard({ debt, onEdit, onDelete, isDeleting }: DebtCardProps) {
   const progress = debt.initialAmount > 0
     ? Math.round((debt.paidAmount / debt.initialAmount) * 100)
     : 0;
+  const associatedPaymentsCount = debt._count?.expenses ?? 0;
+  const canDelete = associatedPaymentsCount === 0;
 
   return (
     <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
@@ -64,17 +67,42 @@ export function DebtCard({ debt, onDelete, isDeleting }: DebtCardProps) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-800 pt-4 text-xs text-slate-500">
+      <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-xs text-slate-400">
+        <ReceiptText size={15} className="text-sky-300" />
+        {associatedPaymentsCount === 0
+          ? 'Sin pagos asociados todavía.'
+          : `${associatedPaymentsCount} pago(s) asociado(s) desde el módulo de gastos.`}
+      </div>
+
+      {!canDelete && (
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs leading-5 text-amber-200">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+          Para mantener la consistencia, esta deuda no se puede eliminar mientras tenga pagos asociados. Elimina primero esos gastos para que el saldo se recalcule.
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
         <span>Inicio: {new Date(debt.startDate).toLocaleDateString('es-CL')}</span>
-        <button
-          type="button"
-          onClick={() => onDelete(debt.id)}
-          disabled={isDeleting}
-          className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 px-3 py-2 text-rose-300 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Trash2 size={14} />
-          Eliminar
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => onEdit(debt)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 px-3 py-2 text-sky-300 transition hover:bg-sky-500/10"
+          >
+            <Pencil size={14} />
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(debt.id)}
+            disabled={isDeleting || !canDelete}
+            title={!canDelete ? 'Elimina primero los pagos asociados desde gastos.' : undefined}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 px-3 py-2 text-rose-300 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Trash2 size={14} />
+            Eliminar
+          </button>
+        </div>
       </div>
     </article>
   );

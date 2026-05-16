@@ -1,12 +1,66 @@
 # Control Financiero Personal
 
-Aplicación web para controlar ingresos, gastos y deudas personales.
+Plataforma Full Stack de control financiero personal orientada a ayudar a personas a entender, ordenar y mejorar su vida financiera.
 
-## Versión actual
+La versión **v3.0** cambia la experiencia inicial: la ruta principal ahora funciona como una landing real con acceso a inicio de sesión y registro. El catálogo completo de funcionalidades queda disponible en `/features`, para que el inicio no se sienta como una documentación técnica sino como entrada natural al producto.
 
-**v0.7 — Gráficos financieros**
+## Rutas principales v3.0
 
-Esta versión agrega gráficos financieros al dashboard: ingresos vs gastos, evolución del balance, gastos por categoría, comparación entre gastos comunes y pagos de deuda, y avance individual de deudas.
+```txt
+/                  Landing pública
+/login             Inicio de sesión visual/demo
+/register          Registro visual/demo
+/features          Catálogo completo de funcionalidades
+/dashboard         Inicio interno del programa
+/onboarding        Configuración guiada
+/demo-guide        Guía de demostración
+```
+
+
+Aplicación web Full Stack para controlar ingresos, gastos, deudas, presupuestos, metas de ahorro, movimientos recurrentes, calendario financiero, proyecciones, importación CSV, alertas, tarjetas de crédito, analítica avanzada y preparación tipo SaaS.
+
+El objetivo es ayudar a personas a ordenar su vida financiera, entender en qué gastan, reducir deudas, cuidar presupuestos, anticipar compromisos futuros y tomar mejores decisiones con datos claros.
+
+## v2.9 — Refactor técnico, estabilidad y calidad base
+
+La v2.9 no agrega un módulo financiero grande; estabiliza la base del proyecto para seguir creciendo hacia v2.7 y v3.0 sin acumular deuda técnica.
+
+Incluye:
+
+- Filtro global de errores en NestJS.
+- Convención de respuesta API para nuevos endpoints.
+- Utilidades financieras compartidas y testeables.
+- Utilidades de rango mensual reutilizables.
+- Tests unitarios adicionales para cálculos financieros.
+- Componentes UI reutilizables para headers, carga y error.
+- Interceptor Axios con versión de cliente y extracción de errores estandarizados.
+- Endpoint de quality report:
+
+```txt
+GET /api/system/quality-report
+```
+
+> Esta versión mantiene compatibilidad con endpoints legacy. La convención de respuesta API se agrega como base para migrar progresivamente nuevos endpoints sin romper el frontend actual.
+
+## Funcionalidades principales
+
+- Dashboard financiero con métricas y gráficos.
+- Registro de ingresos y gastos.
+- Pagos de deuda desde gastos con consistencia transaccional.
+- Control de deudas con progreso pagado/pendiente.
+- Presupuestos mensuales por categoría.
+- Metas de ahorro con aportes.
+- Movimientos recurrentes.
+- Calendario financiero mensual.
+- Proyecciones y simulaciones financieras.
+- Importación CSV y conciliación manual.
+- Centro de alertas financieras.
+- Tarjetas de crédito, cupos y compras en cuotas.
+- Analítica financiera avanzada.
+- Onboarding y demo guide.
+- Página de precios, legal pack, security center y launch readiness.
+- Audit logs básicos.
+- Tests base y documentación técnica.
 
 ## Stack
 
@@ -17,130 +71,33 @@ Esta versión agrega gráficos financieros al dashboard: ingresos vs gastos, evo
 - Vite
 - Tailwind CSS
 - React Router
-- TanStack Query
-- React Hook Form
+- Axios
 - Recharts
+- React Hook Form
+- Zod
 
 ### Backend
 
 - NestJS
 - TypeScript
-- Prisma
+- Prisma ORM
 - PostgreSQL
 - Class Validator
+- Jest
 
-### Base de datos
+### Infraestructura local
 
-- PostgreSQL con Docker Compose
+- Docker Compose
+- PostgreSQL 16
 
----
-
-## Funcionalidades incluidas
-
-### v0.1
-
-- Estructura frontend/backend.
-- React + Vite + TypeScript.
-- NestJS + TypeScript.
-- PostgreSQL con Docker.
-- Prisma configurado.
-- Endpoint de prueba `/api/health`.
-
-### v0.2
-
-- Modelo `Debt`.
-- Migración de deudas.
-- CRUD de deudas en backend.
-- Pantalla `/debts` en frontend.
-- Formulario de creación de deudas.
-- Listado y eliminación de deudas.
-- Resumen visual de deudas.
-
-### v0.3
-
-- Modelo `Income`.
-- Migración de ingresos.
-- CRUD de ingresos en backend.
-- Pantalla `/incomes` en frontend.
-- Formulario de creación de ingresos.
-- Listado y eliminación de ingresos.
-- Resumen visual de ingresos.
-- Navegación desde home hacia ingresos y deudas.
-
-### v0.4
-
-- Modelo `Expense`.
-- Enum `ExpenseType`.
-- Migración de gastos.
-- CRUD de gastos en backend.
-- Pantalla `/expenses` en frontend.
-- Formulario de creación de gastos.
-- Listado y eliminación de gastos.
-- Categorías de gastos.
-- Selector de tipo de gasto: común o pago de deuda.
-- Asociación opcional de un gasto a una deuda.
-- Resumen visual de gastos.
-
-### v0.5
-
-- Pago de deuda desde gastos.
-- Descuento automático de `pendingAmount`.
-- Incremento automático de `paidAmount`.
-- Cambio automático de deuda a `PAID` cuando se paga por completo.
-- Validación para no pagar más que el saldo pendiente.
-- Validación para impedir pagos en deudas pagadas o pausadas.
-- Reversión del saldo si se elimina un pago de deuda.
-- Mensajes de error del backend visibles en frontend.
-
-### v0.6
-
-- Módulo `DashboardModule` en backend.
-- Endpoint `GET /api/dashboard/summary`.
-- Pantalla `/dashboard` en frontend.
-- Tarjetas de resumen financiero.
-- Ingresos del mes.
-- Gastos del mes.
-- Balance mensual.
-- Deuda pendiente total.
-- Gastos comunes del mes.
-- Pagos de deuda del mes.
-- Progreso global de deudas.
-- Últimos movimientos.
-
-### v0.7
-
-- Endpoint `GET /api/dashboard/charts`.
-- Gráfico de ingresos vs gastos de los últimos seis meses.
-- Gráfico de evolución del balance mensual.
-- Gráfico de gastos por categoría del mes actual.
-- Gráfico de gastos comunes vs pagos de deuda.
-- Gráfico de avance individual de deudas.
-- Estados vacíos para gráficos sin datos.
-- Dashboard actualizado con Recharts.
-
----
-
-## Requisitos
-
-- Node.js 20+
-- npm
-- Docker Desktop
-
----
-
-## Instalación
-
-### 1. Levantar la base de datos
-
-Desde la raíz del proyecto:
+## Instalación local
 
 ```bash
+cd control-financiero-v2.9
 docker compose up -d
 ```
 
----
-
-### 2. Backend
+Backend:
 
 ```bash
 cd backend
@@ -148,63 +105,11 @@ cp .env.example .env
 npm install
 npx prisma generate
 npx prisma migrate dev
+npm run seed
 npm run start:dev
 ```
 
-Backend disponible en:
-
-```txt
-http://localhost:3000/api
-```
-
-Endpoint de prueba:
-
-```txt
-GET http://localhost:3000/api/health
-```
-
-Endpoints de deudas:
-
-```txt
-GET    /api/debts
-POST   /api/debts
-GET    /api/debts/:id
-PATCH  /api/debts/:id
-DELETE /api/debts/:id
-```
-
-Endpoints de ingresos:
-
-```txt
-GET    /api/incomes
-POST   /api/incomes
-GET    /api/incomes/:id
-PATCH  /api/incomes/:id
-DELETE /api/incomes/:id
-```
-
-Endpoints de gastos:
-
-```txt
-GET    /api/expenses
-POST   /api/expenses
-GET    /api/expenses/:id
-PATCH  /api/expenses/:id
-DELETE /api/expenses/:id
-```
-
-Endpoints de dashboard:
-
-```txt
-GET /api/dashboard/summary
-GET /api/dashboard/charts
-```
-
----
-
-### 3. Frontend
-
-En otra terminal:
+Frontend:
 
 ```bash
 cd frontend
@@ -213,39 +118,126 @@ npm install
 npm run dev
 ```
 
-Frontend disponible en:
+## Rutas principales
 
 ```txt
 http://localhost:5173
-```
-
-Pantallas disponibles:
-
-```txt
-http://localhost:5173
+http://localhost:5173/onboarding
 http://localhost:5173/dashboard
-http://localhost:5173/debts
 http://localhost:5173/incomes
 http://localhost:5173/expenses
+http://localhost:5173/debts
+http://localhost:5173/budgets
+http://localhost:5173/savings-goals
+http://localhost:5173/recurring-movements
+http://localhost:5173/financial-calendar
+http://localhost:5173/financial-projections
+http://localhost:5173/financial-imports
+http://localhost:5173/notifications
+http://localhost:5173/credit-cards
+http://localhost:5173/financial-analytics
+http://localhost:5173/pricing
+http://localhost:5173/security-center
+http://localhost:5173/legal
+http://localhost:5173/launch-readiness
+http://localhost:5173/demo-guide
+http://localhost:5173/product-status
 ```
 
----
+## Endpoints destacados
 
-## Prueba rápida de gráficos
+```txt
+GET  /api/health
+GET  /api/system/status
+GET  /api/system/launch-checklist
+GET  /api/system/quality-report
+GET  /api/saas/landing
+GET  /api/saas/plans
+GET  /api/saas/security-readiness
+GET  /api/saas/production-checklist
+GET  /api/saas/legal-pack
+GET  /api/audit-logs
+GET  /api/audit-logs/summary
+POST /api/audit-logs
+GET  /api/dashboard/summary
+GET  /api/dashboard/charts
+GET  /api/financial-analytics/advanced
+GET  /api/financial-projections/monthly
+GET  /api/notifications/center
+GET  /api/credit-cards/summary
+```
 
-1. Entra a `/debts` y crea una deuda de `$100.000`.
-2. Entra a `/incomes` y crea un ingreso del mes actual.
-3. Entra a `/expenses` y crea un gasto común.
-4. Entra a `/expenses` y crea un `Pago de deuda` asociado a la deuda.
-5. Entra a `/dashboard`.
-6. Verifica que se actualicen:
-   - Tarjetas resumen.
-   - Ingresos vs gastos.
-   - Balance mensual.
-   - Gastos por categoría.
-   - Gastos comunes vs pagos de deuda.
-   - Avance global e individual de deudas.
-   - Últimos movimientos.
+## Regla de negocio principal
 
----
+Si se registra un gasto como `DEBT_PAYMENT`, el sistema descuenta automáticamente ese monto de la deuda asociada. Si el gasto se elimina, el sistema revierte el pago y restaura el saldo pendiente.
 
+<<<<<<< HEAD
+=======
+## Documentación
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/API_OVERVIEW.md`](docs/API_OVERVIEW.md)
+- [`docs/API_RESPONSE_STANDARD.md`](docs/API_RESPONSE_STANDARD.md)
+- [`docs/TECHNICAL_STABILIZATION.md`](docs/TECHNICAL_STABILIZATION.md)
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- [`docs/IMPORTS.md`](docs/IMPORTS.md)
+- [`docs/NOTIFICATIONS.md`](docs/NOTIFICATIONS.md)
+- [`docs/ANALYTICS.md`](docs/ANALYTICS.md)
+- [`docs/SAAS_READINESS.md`](docs/SAAS_READINESS.md)
+- [`docs/SECURITY.md`](docs/SECURITY.md)
+- [`docs/RUNBOOK.md`](docs/RUNBOOK.md)
+
+## Scripts útiles
+
+### Backend
+
+```bash
+npm run start:dev
+npm run build
+npm run test
+npm run seed
+npm run prisma:migrate
+npm run prisma:studio
+```
+
+### Frontend
+
+```bash
+npm run dev
+npm run build
+npm run preview
+```
+
+## Estado del proyecto
+
+La v2.9 representa una versión de estabilización técnica: mantiene todos los módulos financieros y SaaS de v2.5, pero agrega una base más sólida para errores, utilidades compartidas, calidad, mantenibilidad y futuras migraciones hacia un asistente financiero más inteligente.
+
+
+## v2.9 — Seguridad real, testing y deploy
+
+Esta versión agrega una capa de preparación técnica para una demo pública controlada y una futura producción:
+
+- Hardening básico de API.
+- Rate limiting opcional.
+- Flujos simulados de recuperación de contraseña y verificación de email.
+- Exportación y solicitud de eliminación de datos en modo demo.
+- Audit logs para acciones sensibles.
+- Dockerfiles para frontend/backend.
+- `docker-compose.prod.yml`.
+- Checklist CI/CD y rutas de deploy.
+- Documentación técnica de seguridad, testing y despliegue.
+
+### Rutas nuevas
+
+```txt
+/security-hardening
+/testing-deploy
+```
+
+### Ejecución productiva local de referencia
+
+```bash
+docker compose -f docker-compose.prod.yml up --build
+```
+>>>>>>> 38b9874 (Final Commit, v3.0 financial control platform)

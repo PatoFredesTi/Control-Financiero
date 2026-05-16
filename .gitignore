@@ -13,3 +13,7 @@ backend/prisma/dev.db
 
 # Docker
 postgres_data
+
+.env.production
+playwright-report
+test-results

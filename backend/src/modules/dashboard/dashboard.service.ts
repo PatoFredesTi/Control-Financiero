@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DebtStatus, ExpenseType } from '@prisma/client';
+import { DebtStatus, ExpenseType, GoalStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -10,6 +10,8 @@ export class DashboardService {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
 
     const [
       monthIncomeAggregate,
@@ -24,93 +26,25 @@ export class DashboardService {
       debtsCount,
       recentIncomes,
       recentExpenses,
+      currentMonthBudgets,
+      currentMonthCommonExpenses,
+      savingsGoals,
     ] = await Promise.all([
-      this.prisma.income.aggregate({
-        where: {
-          receivedAt: {
-            gte: monthStart,
-            lt: nextMonthStart,
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
-      this.prisma.expense.aggregate({
-        where: {
-          spentAt: {
-            gte: monthStart,
-            lt: nextMonthStart,
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
-      this.prisma.expense.aggregate({
-        where: {
-          type: ExpenseType.COMMON,
-          spentAt: {
-            gte: monthStart,
-            lt: nextMonthStart,
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
-      this.prisma.expense.aggregate({
-        where: {
-          type: ExpenseType.DEBT_PAYMENT,
-          spentAt: {
-            gte: monthStart,
-            lt: nextMonthStart,
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
-      this.prisma.debt.aggregate({
-        _sum: {
-          initialAmount: true,
-          pendingAmount: true,
-          paidAmount: true,
-        },
-      }),
-      this.prisma.debt.count({
-        where: {
-          status: DebtStatus.ACTIVE,
-        },
-      }),
-      this.prisma.debt.count({
-        where: {
-          status: DebtStatus.PAID,
-        },
-      }),
+      this.prisma.income.aggregate({ where: { receivedAt: { gte: monthStart, lt: nextMonthStart } }, _sum: { amount: true } }),
+      this.prisma.expense.aggregate({ where: { spentAt: { gte: monthStart, lt: nextMonthStart } }, _sum: { amount: true } }),
+      this.prisma.expense.aggregate({ where: { type: ExpenseType.COMMON, spentAt: { gte: monthStart, lt: nextMonthStart } }, _sum: { amount: true } }),
+      this.prisma.expense.aggregate({ where: { type: ExpenseType.DEBT_PAYMENT, spentAt: { gte: monthStart, lt: nextMonthStart } }, _sum: { amount: true } }),
+      this.prisma.debt.aggregate({ _sum: { initialAmount: true, pendingAmount: true, paidAmount: true } }),
+      this.prisma.debt.count({ where: { status: DebtStatus.ACTIVE } }),
+      this.prisma.debt.count({ where: { status: DebtStatus.PAID } }),
       this.prisma.income.count(),
       this.prisma.expense.count(),
       this.prisma.debt.count(),
-      this.prisma.income.findMany({
-        take: 6,
-        orderBy: {
-          receivedAt: 'desc',
-        },
-      }),
-      this.prisma.expense.findMany({
-        take: 6,
-        orderBy: {
-          spentAt: 'desc',
-        },
-        include: {
-          debt: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      }),
+      this.prisma.income.findMany({ take: 6, orderBy: { receivedAt: 'desc' } }),
+      this.prisma.expense.findMany({ take: 6, orderBy: { spentAt: 'desc' }, include: { debt: { select: { id: true, name: true } } } }),
+      this.prisma.budget.findMany({ where: { month, year } }),
+      this.prisma.expense.findMany({ where: { type: ExpenseType.COMMON, spentAt: { gte: monthStart, lt: nextMonthStart } }, select: { category: true, amount: true } }),
+      this.prisma.savingsGoal.findMany(),
     ]);
 
     const totalIncomeThisMonth = monthIncomeAggregate._sum.amount ?? 0;
@@ -120,8 +54,25 @@ export class DashboardService {
     const totalDebtInitial = totalDebtAggregate._sum.initialAmount ?? 0;
     const totalDebtPending = totalDebtAggregate._sum.pendingAmount ?? 0;
     const totalDebtPaid = totalDebtAggregate._sum.paidAmount ?? 0;
-    const debtProgressPercentage =
-      totalDebtInitial > 0 ? Math.round((totalDebtPaid / totalDebtInitial) * 100) : 0;
+    const debtProgressPercentage = totalDebtInitial > 0 ? Math.round((totalDebtPaid / totalDebtInitial) * 100) : 0;
+
+    const budgetsWithUsage = currentMonthBudgets.map((budget) => {
+      const spentAmount = currentMonthCommonExpenses
+        .filter((expense) => expense.category.toLowerCase() === budget.category.toLowerCase())
+        .reduce((sum, expense) => sum + expense.amount, 0);
+
+      return {
+        ...budget,
+        spentAmount,
+        remainingAmount: budget.amount - spentAmount,
+        usagePercentage: budget.amount > 0 ? Math.round((spentAmount / budget.amount) * 100) : 0,
+      };
+    });
+
+    const totalBudgeted = budgetsWithUsage.reduce((sum, budget) => sum + budget.amount, 0);
+    const totalBudgetSpent = budgetsWithUsage.reduce((sum, budget) => sum + budget.spentAmount, 0);
+    const totalSavingsTarget = savingsGoals.reduce((sum, goal) => sum + goal.targetAmount, 0);
+    const totalSavingsCurrent = savingsGoals.reduce((sum, goal) => sum + goal.currentAmount, 0);
 
     const recentMovements = [
       ...recentIncomes.map((income) => ({
@@ -142,14 +93,12 @@ export class DashboardService {
         expenseType: expense.type,
         debtName: expense.debt?.name ?? null,
       })),
-    ]
-      .sort((a, b) => b.date.getTime() - a.date.getTime())
-      .slice(0, 8);
+    ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 8);
 
     return {
       period: {
-        month: now.getMonth() + 1,
-        year: now.getFullYear(),
+        month,
+        year,
         monthStart: monthStart.toISOString(),
         nextMonthStart: nextMonthStart.toISOString(),
       },
@@ -171,6 +120,23 @@ export class DashboardService {
         activeDebts,
         paidDebts,
       },
+      budgets: {
+        totalBudgeted,
+        totalSpent: totalBudgetSpent,
+        remainingAmount: totalBudgeted - totalBudgetSpent,
+        usagePercentage: totalBudgeted > 0 ? Math.round((totalBudgetSpent / totalBudgeted) * 100) : 0,
+        exceededBudgets: budgetsWithUsage.filter((budget) => budget.remainingAmount < 0).length,
+        count: budgetsWithUsage.length,
+      },
+      savingsGoals: {
+        totalGoals: savingsGoals.length,
+        activeGoals: savingsGoals.filter((goal) => goal.status === GoalStatus.ACTIVE).length,
+        completedGoals: savingsGoals.filter((goal) => goal.status === GoalStatus.COMPLETED).length,
+        totalTarget: totalSavingsTarget,
+        totalSaved: totalSavingsCurrent,
+        remainingAmount: Math.max(totalSavingsTarget - totalSavingsCurrent, 0),
+        progressPercentage: totalSavingsTarget > 0 ? Math.round((totalSavingsCurrent / totalSavingsTarget) * 100) : 0,
+      },
       recentMovements,
     };
   }
@@ -182,68 +148,22 @@ export class DashboardService {
     const sixMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
     const [incomes, expenses, expensesByCategory, debts] = await Promise.all([
-      this.prisma.income.findMany({
-        where: {
-          receivedAt: {
-            gte: sixMonthsAgoStart,
-            lt: nextMonthStart,
-          },
-        },
-        select: {
-          amount: true,
-          receivedAt: true,
-        },
-      }),
-      this.prisma.expense.findMany({
-        where: {
-          spentAt: {
-            gte: sixMonthsAgoStart,
-            lt: nextMonthStart,
-          },
-        },
-        select: {
-          amount: true,
-          spentAt: true,
-          type: true,
-        },
-      }),
+      this.prisma.income.findMany({ where: { receivedAt: { gte: sixMonthsAgoStart, lt: nextMonthStart } }, select: { amount: true, receivedAt: true } }),
+      this.prisma.expense.findMany({ where: { spentAt: { gte: sixMonthsAgoStart, lt: nextMonthStart } }, select: { amount: true, spentAt: true, type: true } }),
       this.prisma.expense.groupBy({
         by: ['category'],
-        where: {
-          spentAt: {
-            gte: currentMonthStart,
-            lt: nextMonthStart,
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-        _count: {
-          id: true,
-        },
-        orderBy: {
-          _sum: {
-            amount: 'desc',
-          },
-        },
+        where: { spentAt: { gte: currentMonthStart, lt: nextMonthStart } },
+        _sum: { amount: true },
+        _count: { id: true },
+        orderBy: { _sum: { amount: 'desc' } },
       }),
       this.prisma.debt.findMany({
         orderBy: [{ status: 'asc' }, { pendingAmount: 'desc' }],
-        select: {
-          id: true,
-          name: true,
-          initialAmount: true,
-          paidAmount: true,
-          pendingAmount: true,
-          status: true,
-        },
+        select: { id: true, name: true, initialAmount: true, paidAmount: true, pendingAmount: true, status: true },
       }),
     ]);
 
-    const monthFormatter = new Intl.DateTimeFormat('es-CL', {
-      month: 'short',
-      year: '2-digit',
-    });
+    const monthFormatter = new Intl.DateTimeFormat('es-CL', { month: 'short', year: '2-digit' });
 
     const monthlyComparison = Array.from({ length: 6 }, (_, index) => {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1);
@@ -258,25 +178,12 @@ export class DashboardService {
         .filter((item) => item.spentAt.getMonth() === month && item.spentAt.getFullYear() === year)
         .reduce((sum, item) => sum + item.amount, 0);
 
-      return {
-        month: monthFormatter.format(monthDate),
-        income,
-        expense,
-        balance: income - expense,
-      };
+      return { month: monthFormatter.format(monthDate), income, expense, balance: income - expense };
     });
 
-    const currentMonthExpenses = expenses.filter(
-      (expense) => expense.spentAt >= currentMonthStart && expense.spentAt < nextMonthStart,
-    );
-
-    const commonExpenses = currentMonthExpenses
-      .filter((expense) => expense.type === ExpenseType.COMMON)
-      .reduce((sum, expense) => sum + expense.amount, 0);
-
-    const debtPayments = currentMonthExpenses
-      .filter((expense) => expense.type === ExpenseType.DEBT_PAYMENT)
-      .reduce((sum, expense) => sum + expense.amount, 0);
+    const currentMonthExpenses = expenses.filter((expense) => expense.spentAt >= currentMonthStart && expense.spentAt < nextMonthStart);
+    const commonExpenses = currentMonthExpenses.filter((expense) => expense.type === ExpenseType.COMMON).reduce((sum, expense) => sum + expense.amount, 0);
+    const debtPayments = currentMonthExpenses.filter((expense) => expense.type === ExpenseType.DEBT_PAYMENT).reduce((sum, expense) => sum + expense.amount, 0);
 
     return {
       period: {
@@ -287,20 +194,10 @@ export class DashboardService {
         sixMonthsAgoStart: sixMonthsAgoStart.toISOString(),
       },
       monthlyComparison,
-      expensesByCategory: expensesByCategory.map((category) => ({
-        category: category.category,
-        amount: category._sum.amount ?? 0,
-        count: category._count.id,
-      })),
+      expensesByCategory: expensesByCategory.map((category) => ({ category: category.category, amount: category._sum.amount ?? 0, count: category._count.id })),
       expenseTypeBreakdown: [
-        {
-          type: 'Gastos comunes',
-          amount: commonExpenses,
-        },
-        {
-          type: 'Pagos de deuda',
-          amount: debtPayments,
-        },
+        { type: 'Gastos comunes', amount: commonExpenses },
+        { type: 'Pagos de deuda', amount: debtPayments },
       ],
       debtProgress: debts.map((debt) => ({
         id: debt.id,
@@ -309,8 +206,7 @@ export class DashboardService {
         paidAmount: debt.paidAmount,
         pendingAmount: debt.pendingAmount,
         status: debt.status,
-        progressPercentage:
-          debt.initialAmount > 0 ? Math.round((debt.paidAmount / debt.initialAmount) * 100) : 0,
+        progressPercentage: debt.initialAmount > 0 ? Math.round((debt.paidAmount / debt.initialAmount) * 100) : 0,
       })),
     };
   }

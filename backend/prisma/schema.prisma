@@ -34,7 +34,9 @@ model Debt {
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  expenses         Expense[]
+  expenses           Expense[]
+  recurringMovements RecurringMovement[]
+  importedMovements  ImportedMovement[]
 
   @@index([status])
   @@index([createdAt])
@@ -70,9 +72,273 @@ model Expense {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
+  paidInstallment Installment?
+
   @@index([category])
   @@index([spentAt])
   @@index([type])
   @@index([debtId])
+  @@index([createdAt])
+}
+
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+model Budget {
+  id        String   @id @default(uuid())
+  category  String
+  amount    Int
+  month     Int
+  year      Int
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([category, month, year])
+  @@index([month, year])
+  @@index([category])
+}
+
+model SavingsGoal {
+  id            String             @id @default(uuid())
+  name          String
+  description   String?
+  targetAmount  Int
+  currentAmount Int                @default(0)
+  targetDate    DateTime?
+  status        GoalStatus         @default(ACTIVE)
+  notes         String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  contributions GoalContribution[]
+
+  @@index([status])
+  @@index([targetDate])
+}
+
+model GoalContribution {
+  id            String      @id @default(uuid())
+  savingsGoalId String
+  savingsGoal   SavingsGoal @relation(fields: [savingsGoalId], references: [id], onDelete: Cascade)
+  amount        Int
+  contributedAt DateTime
+  notes         String?
+  createdAt     DateTime    @default(now())
+
+  @@index([savingsGoalId])
+  @@index([contributedAt])
+}
+
+
+enum RecurringMovementKind {
+  INCOME
+  EXPENSE
+  DEBT_PAYMENT
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum RecurringStatus {
+  ACTIVE
+  PAUSED
+  FINISHED
+}
+
+model RecurringMovement {
+  id            String                @id @default(uuid())
+  description   String
+  amount        Int
+  category      String
+  paymentMethod String?
+  kind          RecurringMovementKind
+  frequency     RecurringFrequency
+  nextRunAt     DateTime
+  lastRunAt     DateTime?
+  debtId        String?
+  debt          Debt?                 @relation(fields: [debtId], references: [id], onDelete: SetNull)
+  status        RecurringStatus       @default(ACTIVE)
+  notes         String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([kind])
+  @@index([frequency])
+  @@index([status])
+  @@index([nextRunAt])
+  @@index([debtId])
+}
+
+
+enum ImportedMovementStatus {
+  PENDING
+  CLASSIFIED
+  IMPORTED
+  DUPLICATE
+  IGNORED
+}
+
+enum ImportedMovementType {
+  INCOME
+  EXPENSE
+  DEBT_PAYMENT
+  UNKNOWN
+}
+
+model ImportBatch {
+  id            String             @id @default(uuid())
+  fileName      String?
+  source        String?
+  totalRows     Int                @default(0)
+  importedRows  Int                @default(0)
+  duplicateRows Int                @default(0)
+  status        String             @default("PREVIEW")
+  notes         String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  movements     ImportedMovement[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ImportedMovement {
+  id                     String                 @id @default(uuid())
+  batchId                String
+  batch                  ImportBatch            @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rowNumber              Int
+  rawDate                String?
+  rawDescription         String
+  rawAmount              String
+  parsedDate             DateTime?
+  description            String
+  amount                 Int
+  suggestedType          ImportedMovementType   @default(UNKNOWN)
+  suggestedCategory      String?
+  suggestedPaymentMethod String?
+  debtId                 String?
+  debt                   Debt?                  @relation(fields: [debtId], references: [id], onDelete: SetNull)
+  duplicateScore         Int                    @default(0)
+  possibleDuplicateId    String?
+  status                 ImportedMovementStatus @default(PENDING)
+  importedEntityType     String?
+  importedEntityId       String?
+  notes                  String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  @@index([batchId])
+  @@index([status])
+  @@index([suggestedType])
+  @@index([parsedDate])
+  @@index([debtId])
+}
+
+
+
+enum CreditCardStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+enum InstallmentPurchaseStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model CreditCard {
+  id            String           @id @default(uuid())
+  name          String
+  issuer        String?
+  limitAmount   Int
+  usedAmount    Int              @default(0)
+  billingDay    Int
+  paymentDueDay Int
+  status        CreditCardStatus @default(ACTIVE)
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  purchases     InstallmentPurchase[]
+
+  @@index([status])
+  @@index([issuer])
+}
+
+model InstallmentPurchase {
+  id                String                    @id @default(uuid())
+  creditCardId      String
+  creditCard        CreditCard                @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  description       String
+  category          String
+  totalAmount       Int
+  installmentsCount Int
+  monthlyAmount     Int
+  paidAmount        Int                       @default(0)
+  pendingAmount     Int
+  firstInstallmentAt DateTime
+  status            InstallmentPurchaseStatus @default(ACTIVE)
+  notes             String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  installments      Installment[]
+
+  @@index([creditCardId])
+  @@index([status])
+  @@index([firstInstallmentAt])
+}
+
+model Installment {
+  id           String            @id @default(uuid())
+  purchaseId   String
+  purchase     InstallmentPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  number       Int
+  amount       Int
+  dueAt        DateTime
+  status       InstallmentStatus @default(PENDING)
+  paidAt       DateTime?
+  expenseId    String?           @unique
+  expense      Expense?          @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([purchaseId, number])
+  @@index([purchaseId])
+  @@index([dueAt])
+  @@index([status])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String?
+  actor     String   @default("system")
+  severity  String   @default("LOW")
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([entity])
+  @@index([severity])
   @@index([createdAt])
 }

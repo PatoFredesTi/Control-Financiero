@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import type { CreateIncomeInput } from '../types/income';
+import type { CreateIncomeInput, Income } from '../types/income';
 
 const incomeCategories = [
   'Sueldo',
@@ -23,42 +24,51 @@ function getToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function buildDefaultValues(income?: Income): CreateIncomeInput {
+  return {
+    description: income?.description ?? '',
+    amount: income?.amount ?? 0,
+    category: income?.category ?? 'Sueldo',
+    receivedAt: income?.receivedAt ? income.receivedAt.slice(0, 10) : getToday(),
+    paymentMethod: income?.paymentMethod ?? 'Transferencia',
+    notes: income?.notes ?? '',
+  };
+}
+
 type IncomeFormProps = {
   onSubmit: (input: CreateIncomeInput) => void;
   isSubmitting: boolean;
+  initialData?: Income | null;
+  onCancelEdit?: () => void;
 };
 
-export function IncomeForm({ onSubmit, isSubmitting }: IncomeFormProps) {
+export function IncomeForm({ onSubmit, isSubmitting, initialData, onCancelEdit }: IncomeFormProps) {
+  const isEditing = Boolean(initialData);
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
   } = useForm<CreateIncomeInput>({
-    defaultValues: {
-      description: '',
-      amount: 0,
-      category: 'Sueldo',
-      receivedAt: getToday(),
-      paymentMethod: 'Transferencia',
-      notes: '',
-    },
+    defaultValues: buildDefaultValues(initialData ?? undefined),
   });
+
+  useEffect(() => {
+    reset(buildDefaultValues(initialData ?? undefined));
+  }, [initialData, reset]);
 
   function submitForm(input: CreateIncomeInput) {
     onSubmit({
       ...input,
       amount: Number(input.amount),
+      notes: input.notes?.trim() || undefined,
+      paymentMethod: input.paymentMethod?.trim() || undefined,
     });
 
-    reset({
-      description: '',
-      amount: 0,
-      category: 'Sueldo',
-      receivedAt: getToday(),
-      paymentMethod: 'Transferencia',
-      notes: '',
-    });
+    if (!isEditing) {
+      reset(buildDefaultValues());
+    }
   }
 
   return (
@@ -66,11 +76,24 @@ export function IncomeForm({ onSubmit, isSubmitting }: IncomeFormProps) {
       onSubmit={handleSubmit(submitForm)}
       className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl"
     >
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Nuevo ingreso</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Registra entradas de dinero como sueldo, ventas, bonos o trabajos freelance.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">{isEditing ? 'Editar ingreso' : 'Nuevo ingreso'}</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            {isEditing
+              ? 'Actualiza los datos de este ingreso. Los cambios se verán reflejados en dashboard y gráficos.'
+              : 'Registra entradas de dinero como sueldo, ventas, bonos o trabajos freelance.'}
+          </p>
+        </div>
+        {isEditing && onCancelEdit && (
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-emerald-500 hover:text-emerald-300"
+          >
+            Cancelar
+          </button>
+        )}
       </div>
 
       <div className="grid gap-4">
@@ -159,7 +182,7 @@ export function IncomeForm({ onSubmit, isSubmitting }: IncomeFormProps) {
         disabled={isSubmitting}
         className="mt-6 w-full rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? 'Guardando...' : 'Crear ingreso'}
+        {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear ingreso'}
       </button>
     </form>
   );
