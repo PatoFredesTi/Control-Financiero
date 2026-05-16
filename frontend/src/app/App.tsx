@@ -168,7 +168,20 @@ export function App() {
 
       <footer className="bg-slate-950 px-4 py-8 text-sm text-slate-400 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <p>© 2026 Control Financiero Personal. Proyecto Full Stack de portafolio.</p>
+          <p>© 2026 Control Financiero Personal.</p>
+
+          <div className="flex items-center gap-2">
+            <p>Creado por Patricio Fredes</p>
+            <a
+              href="https://www.patriciofredes.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-emerald-300 hover:text-emerald-200"
+            >
+              Ver portafolio
+            </a>
+          </div>
+
           <div className="flex flex-wrap gap-4">
             <Link to="/features" className="hover:text-emerald-300">Qué puedes hacer</Link>
             <Link to="/demo-guide" className="hover:text-emerald-300">Guía demo</Link>
