@@ -313,7 +313,11 @@ export class FinancialAnalyticsService {
   }
 
   private buildDebtAnalysis(debts: Array<{ name: string; initialAmount: number; pendingAmount: number; paidAmount: number; status: DebtStatus }>, monthlyIncome: number) {
-    const activeDebts = debts.filter((debt) => [DebtStatus.ACTIVE, DebtStatus.OVERDUE].includes(debt.status) && debt.pendingAmount > 0);
+    const activeDebts = debts.filter(
+  (debt) =>
+    (debt.status === DebtStatus.ACTIVE || debt.status === DebtStatus.OVERDUE) &&
+    debt.pendingAmount > 0,
+);
     const totalPending = activeDebts.reduce((sum, debt) => sum + debt.pendingAmount, 0);
     const totalInitial = debts.reduce((sum, debt) => sum + debt.initialAmount, 0);
     const totalPaid = debts.reduce((sum, debt) => sum + debt.paidAmount, 0);

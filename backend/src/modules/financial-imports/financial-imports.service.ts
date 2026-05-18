@@ -486,7 +486,10 @@ export class FinancialImportsService {
     const selectedIds = new Set(commitImportBatchDto.movementIds ?? []);
     const movementsToImport = batch.movements.filter((movement) => {
       if (selectedIds.size > 0 && !selectedIds.has(movement.id)) return false;
-      return [ImportedMovementStatus.PENDING, ImportedMovementStatus.CLASSIFIED].includes(movement.status);
+      return (
+  movement.status === ImportedMovementStatus.PENDING ||
+  movement.status === ImportedMovementStatus.CLASSIFIED
+);
     });
 
     const imported: Array<{ movementId: string; entityType: string; entityId: string }> = [];
