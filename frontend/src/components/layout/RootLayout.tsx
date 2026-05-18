@@ -1,12 +1,12 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { BarChart3, BellRing, CalendarDays, Home, Plus, ReceiptText, WifiOff } from 'lucide-react';
+import { BarChart3, BellRing, CircleDollarSign, CreditCard, Plus, ReceiptText, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const navItems = [
-  { to: '/dashboard', label: 'Inicio', icon: Home },
-  { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+  { to: '/dashboard', label: 'Panel', icon: BarChart3 },
+  { to: '/incomes', label: 'Ingresos', icon: CircleDollarSign },
   { to: '/expenses', label: 'Gastos', icon: ReceiptText },
-  { to: '/financial-calendar', label: 'Calendario', icon: CalendarDays },
+  { to: '/debts', label: 'Deudas', icon: CreditCard },
   { to: '/notifications', label: 'Alertas', icon: BellRing },
 ];
 
@@ -33,7 +33,7 @@ function OfflineBanner() {
   );
 }
 
-const publicPaths = new Set(['/', '/login', '/register', '/features', '/pricing', '/legal']);
+const publicPaths = new Set(['/', '/login', '/register', '/features', '/pricing', '/legal', '/product-status', '/demo-guide', '/launch-readiness', '/security-center']);
 
 function MobileBottomNav() {
   const location = useLocation();

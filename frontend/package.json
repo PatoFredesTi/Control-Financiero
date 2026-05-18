@@ -1,11 +1,7 @@
 {
   "name": "control-financiero-frontend",
   "private": true,
-    "packageManager": "pnpm@9.15.4",
-  "engines": {
-    "node": "20.x"
-  },
-  "version": "3.0.0",
+  "version": "3.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { BarChart3, BellRing, BrainCircuit, CalendarDays, CheckCircle2, CircleDollarSign, ClipboardCheck, CreditCard, Database, FileSpreadsheet, Goal, LineChart, PiggyBank, ReceiptText, Repeat2, Rocket, ShieldCheck, Crown, FileText, LockKeyhole, RocketIcon, Smartphone, ShieldAlert, TestTube2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BarChart3, BellRing, BrainCircuit, CalendarDays, CheckCircle2, CircleDollarSign, ClipboardCheck, CreditCard, Database, FileSpreadsheet, Goal, LineChart, PiggyBank, ReceiptText, Repeat2, Rocket, ShieldCheck, Crown, FileText, LockKeyhole, RocketIcon, Smartphone, ShieldAlert, TestTube2, WalletCards } from 'lucide-react';
 
 const cards = [
   { title: 'Dashboard', description: 'Resumen mensual, balance, deuda pendiente, presupuestos, metas y gráficos financieros.', icon: BarChart3, status: 'Resumen + gráficos', href: '/dashboard' },
@@ -40,25 +40,51 @@ const highlights = [
 export function FeatureCatalogPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-6 sm:py-10">
-      <section className="mx-auto max-w-6xl">
-        <div className="mb-10 overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/70 shadow-2xl">
-          <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.4fr_0.8fr] lg:p-10">
+      <section className="mx-auto max-w-7xl">
+        <Link to="/" className="mb-6 inline-flex items-center gap-2 rounded-xl border border-slate-800 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-emerald-500 hover:text-emerald-300">
+          <ArrowLeft size={16} /> Volver a inicio
+        </Link>
+
+        <div className="mb-10 overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-900/70 shadow-2xl">
+          <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-10">
             <div>
-              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-emerald-400">Catálogo de funcionalidades</p>
-              <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">Control Financiero Personal</h1>
-              <p className="max-w-3xl text-lg leading-8 text-slate-300">
-                Aplicación Full Stack para controlar ingresos, gastos, deudas, presupuestos, metas, recurrentes, calendario y proyecciones financieras. Esta vista reúne todo lo que la plataforma permite hacer: control de ingresos, gastos, deudas, presupuestos, metas, tarjetas, importaciones, alertas, asistente financiero, seguridad, testing y preparación SaaS.
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-200">
+                <WalletCards size={16} /> Más información del producto
+              </div>
+              <h1 className="max-w-4xl text-4xl font-black tracking-tight md:text-6xl">
+                Una plataforma para ordenar tu dinero, tus deudas y tus metas.
+              </h1>
+              <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
+                Esta vista reúne la propuesta de valor y todas las capacidades del sistema. La pantalla principal queda limpia para iniciar sesión o registrarse, mientras que aquí puedes revisar qué hace la app y cómo ayuda a tomar control financiero.
               </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Link to="/dashboard" className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400">Entrar al dashboard</Link>
-                <Link to="/onboarding" className="inline-flex items-center justify-center rounded-xl border border-slate-700 px-5 py-3 font-semibold text-slate-200 transition hover:border-emerald-500 hover:text-emerald-300">Comenzar onboarding</Link>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link to="/login" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 font-bold text-slate-950 shadow-xl shadow-emerald-500/20 transition hover:bg-emerald-400">
+                  Iniciar sesión <ArrowRight size={18} />
+                </Link>
+                <Link to="/register" className="inline-flex items-center justify-center rounded-2xl border border-slate-700 px-6 py-4 font-bold text-slate-100 transition hover:border-emerald-500 hover:text-emerald-300">
+                  Crear cuenta gratis
+                </Link>
               </div>
             </div>
 
-            <aside className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/20 text-emerald-300"><ShieldCheck size={26} /></div>
-              <h2 className="text-xl font-bold text-emerald-100">Vista de capacidades</h2>
-              <p className="mt-2 text-sm leading-6 text-emerald-100/80">Esta sección queda separada del inicio principal para que el usuario llegue primero a una pantalla simple de inicio de sesión o registro, y pueda revisar las capacidades cuando quiera.</p>
+            <aside className="rounded-[2rem] border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 to-slate-950 p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-400">Resumen del mes</p>
+                  <h2 className="text-2xl font-bold text-white">Panel financiero</h2>
+                </div>
+                <div className="rounded-2xl bg-emerald-500/20 p-3 text-emerald-300"><ShieldCheck size={24} /></div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-slate-950/70 p-4"><p className="text-xs uppercase tracking-[0.2em] text-slate-500">Balance</p><p className="mt-2 text-2xl font-black text-emerald-300">+$340.000</p></div>
+                <div className="rounded-2xl bg-slate-950/70 p-4"><p className="text-xs uppercase tracking-[0.2em] text-slate-500">Deuda pendiente</p><p className="mt-2 text-2xl font-black text-amber-300">$780.000</p></div>
+                <div className="rounded-2xl bg-slate-950/70 p-4"><p className="text-xs uppercase tracking-[0.2em] text-slate-500">Meta ahorro</p><p className="mt-2 text-2xl font-black text-sky-300">42%</p></div>
+                <div className="rounded-2xl bg-slate-950/70 p-4"><p className="text-xs uppercase tracking-[0.2em] text-slate-500">Score</p><p className="mt-2 text-2xl font-black text-emerald-300">74/100</p></div>
+              </div>
+              <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-bold text-emerald-200"><PiggyBank size={18} /> Acción recomendada</div>
+                <p className="text-sm leading-6 text-slate-300">Evita nuevas compras en cuotas este mes y destina $60.000 extra a la deuda principal.</p>
+              </div>
             </aside>
           </div>
         </div>
@@ -71,6 +97,11 @@ export function FeatureCatalogPage() {
           ))}
         </div>
 
+        <div className="mb-6 flex flex-col gap-2">
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-400">Catálogo de funcionalidades</p>
+          <h2 className="text-3xl font-black text-white">Todo lo que puedes hacer dentro de la app</h2>
+        </div>
+
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {cards.map((card) => {
             const Icon = card.icon;
@@ -79,7 +110,7 @@ export function FeatureCatalogPage() {
                 <article className="h-full rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl transition hover:-translate-y-1 hover:border-emerald-500/50">
                   <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400"><Icon size={26} /></div>
                   <div className="mb-3 inline-flex rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400">{card.status}</div>
-                  <h2 className="mb-2 text-xl font-semibold">{card.title}</h2>
+                  <h3 className="mb-2 text-xl font-semibold">{card.title}</h3>
                   <p className="text-sm leading-6 text-slate-400">{card.description}</p>
                 </article>
               </Link>
