@@ -28,12 +28,13 @@ import { FinancialAssistantPage } from '../modules/financial-assistant/pages/Fin
 import { QuickAddPage } from '../modules/quick-add/pages/QuickAddPage';
 import { SecurityHardeningPage } from '../modules/security/pages/SecurityHardeningPage';
 import { TestingDeployPage } from '../modules/testing-deploy/pages/TestingDeployPage';
+import { AuthStartPage } from '../modules/public/pages/AuthStartPage';
 
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
-      { path: '/', element: <App /> },
+      { path: '/', element: <AuthStartPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
       { path: '/features', element: <FeatureCatalogPage /> },
